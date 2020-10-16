@@ -1,4 +1,5 @@
 Begin Assembly
+LW R9, 4000(R0)
 ADDI R8, R0, 2000
 ADDI R1, R0, 10
 ADDI R2, R0, 9

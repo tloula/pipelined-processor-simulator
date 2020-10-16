@@ -56,10 +56,13 @@ public class ExMemStage {
             // SW R1, 1000(R2)
             leftOperand = simulator.getIdExStage().getRegAData();
             rightOperand = simulator.getIdExStage().getImmediate();
-            System.out.println("line 52 of ExMemStage.java");
             storeIntData = simulator.getIdExStage().getIntRegister(((ITypeInst)inst).getRT()); // TODO: Fix???? 
         }
         else{
+            if(opcode == Instruction.INST_LW){
+                leftOperand = simulator.getIdExStage().getRegAData();
+                rightOperand = simulator.getIdExStage().getImmediate();
+            }
             storeIntData = 0;
         }
         if (inst instanceof ITypeInst) {
@@ -78,6 +81,8 @@ public class ExMemStage {
         switch(this.opcode) {
             case Instruction.INST_ADD:
             case Instruction.INST_ADDI:
+            case Instruction.INST_SW:
+            case Instruction.INST_LW:
                 aluIntData = leftOperand + rightOperand;
                 break;
             case Instruction.INST_SUB:
@@ -113,9 +118,6 @@ public class ExMemStage {
                 break;
             case Instruction.INST_SRA:
                 aluIntData = leftOperand >> rightOperand;
-                break;
-            case Instruction.INST_SW:
-                aluIntData = leftOperand + rightOperand;
                 break;
             default:
                 System.out.println("Invalid ARU inst: " + Instruction.getNameFromOpcode(opcode));
