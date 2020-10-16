@@ -8,6 +8,7 @@ public class ExMemStage {
     int opcode;
     int aluIntData;
     int storeIntData;
+    Boolean branchTaken = false;
 
     public ExMemStage(PipelineSimulator sim) {
         simulator = sim;
@@ -29,17 +30,23 @@ public class ExMemStage {
         return this.shouldWriteback;
     }
 
+    public boolean branchTaken() {
+        return this.branchTaken;
+    }
+
     public int getInstPC(){
         return this.instPC;
     }
 
     public void update() {
+        // HALT
         if(this.opcode == Instruction.INST_HALT){
             return;
         }
+
+        // Setting PC and Instruction
         this.instPC = simulator.getIdExStage().getInstPC();
         Instruction inst = new Instruction();
-
         if(this.instPC == -1){
             inst.setOpcode(Instruction.INST_NOP);
         }
@@ -50,27 +57,91 @@ public class ExMemStage {
 
         int leftOperand = -1;
         int rightOperand = -1;
+
+        // Save Registers to local variables
+        int regAData = simulator.getIdExStage().getRegAData();
+        int regBData = simulator.getIdExStage().getRegBData();
+        int immediate = simulator.getIdExStage().getImmediate();
         
         // Set ALU operands
         if(opcode == Instruction.INST_SW){
             // SW R1, 1000(R2)
-            leftOperand = simulator.getIdExStage().getRegAData();
-            rightOperand = simulator.getIdExStage().getImmediate();
-            storeIntData = simulator.getIdExStage().getIntRegister(((ITypeInst)inst).getRT()); // TODO: Fix???? 
+            leftOperand = regAData;
+            rightOperand = immediate;
+            storeIntData = regBData;
         }
         else{
             if(opcode == Instruction.INST_LW){
-                leftOperand = simulator.getIdExStage().getRegAData();
-                rightOperand = simulator.getIdExStage().getImmediate();
+                leftOperand = regAData;
+                rightOperand = immediate;
             }
             storeIntData = 0;
         }
         if (inst instanceof ITypeInst) {
-            leftOperand = simulator.getIdExStage().getImmediate();
-            rightOperand = simulator.getIdExStage().getRegAData();
+            leftOperand = immediate;
+            rightOperand = regAData;
+            
+            // Branch Instructions
+            if( opcode == Instruction.INST_BEQ ||
+                opcode == Instruction.INST_BNE || 
+                opcode == Instruction.INST_BGEZ || 
+                opcode == Instruction.INST_BGTZ || 
+                opcode == Instruction.INST_BLEZ || 
+                opcode == Instruction.INST_BLTZ ||
+                opcode == Instruction.INST_JR || 
+                opcode == Instruction.INST_JALR) {
+                rightOperand = instPC;
+
+                // decide if branch is taken
+                switch(opcode){
+                    case Instruction.INST_BEQ:
+                        if (regAData == regBData) branchTaken = true;
+                        else branchTaken = false;
+                        break;
+                    case Instruction.INST_BNE:
+                        if (regAData != regBData) branchTaken = true;
+                        else branchTaken = false;
+                        break;
+                    case Instruction.INST_BGEZ:
+                        if (regAData >= 0) branchTaken = true;
+                        else branchTaken = false;
+                        break;
+                    case Instruction.INST_BGTZ:
+                        if (regAData > 0) branchTaken = true;
+                        else branchTaken = false;
+                        break;
+                    case Instruction.INST_BLEZ:
+                        if (regAData <= 0) branchTaken = true;
+                        else branchTaken = false;
+                        break;
+                    case Instruction.INST_BLTZ:
+                        if (regAData < 0) branchTaken = true;
+                        else branchTaken = false;
+                        break;
+                    case Instruction.INST_JR:
+                    case Instruction.INST_JALR:
+                        branchTaken = true;
+                        break;
+                    default:
+                        branchTaken = false;
+                        System.out.println("How did you get here?" + Instruction.getNameFromOpcode(opcode));
+                        break;
+                }
+            }
+            else {
+                branchTaken = false;
+            }
         }
         else if (inst instanceof JTypeInst){
             leftOperand = simulator.getIdExStage().getImmediate();
+            rightOperand = instPC;
+            if( opcode == Instruction.INST_J ||
+                opcode == Instruction.INST_JAL){
+                branchTaken = true;
+            }
+            else{
+                branchTaken = false;
+            }
         }
         else if (inst instanceof RTypeInst) {
             leftOperand = simulator.getIdExStage().getRegAData();
@@ -83,6 +154,16 @@ public class ExMemStage {
             case Instruction.INST_ADDI:
             case Instruction.INST_SW:
             case Instruction.INST_LW:
+            case Instruction.INST_BEQ:
+            case Instruction.INST_BNE:
+            case Instruction.INST_BGEZ: 
+            case Instruction.INST_BGTZ:
+            case Instruction.INST_BLEZ: 
+            case Instruction.INST_BLTZ:
+            case Instruction.INST_JR: 
+            case Instruction.INST_JALR:
+            case Instruction.INST_JAL:
+            case Instruction.INST_J:
                 aluIntData = leftOperand + rightOperand;
                 break;
             case Instruction.INST_SUB:
@@ -124,5 +205,9 @@ public class ExMemStage {
                 aluIntData = 0;
         }
         shouldWriteback = simulator.getIdExStage().getShouldWriteBack();
+        
+        if(branchTaken){
+            System.out.println("Branch Taken");
+        }
     }
 }

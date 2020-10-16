@@ -1,14 +1,24 @@
       -- R1 = i
 0:  ADDI R1, R0, 10
-Label LOOP
-4:  ADDI R1, R1, -1
+LABEL LOOP
+4:  NOP
 8:  NOP
 12:  NOP
 16:  NOP
-20:  NOP
-24:  BEQ R1, R0, LOOP
+20:  BEQ R1, R0, END
+24:  NOP
 28:  NOP
 32:  NOP
 36:  NOP
-40:  NOP
-44:  HALT
+40:  ADDI R1, R1, -1
+44:  NOP
+48:  NOP
+52:  NOP
+56:  NOP
+60:  J LOOP
+64:  NOP
+68:  NOP
+72:  NOP
+76:  NOP
+LABEL END
+80:  HALT

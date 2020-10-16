@@ -41,6 +41,7 @@ public class MemWbStage {
             }
 
             else if (inst instanceof RTypeInst) {
+                // Isn't LW an I type instruction? Do we need to do this check??? I think we can just run this.simulator.get....
                 RTypeInst r = (RTypeInst)inst;
                 if (inst.getOpcode() == Instruction.INST_LW) {          // Kill me
                     this.simulator.getIdExStage().setIntRegister(r.getRD(), loadIntData); // Change back to getRS()!!!

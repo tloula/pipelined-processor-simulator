@@ -17,8 +17,20 @@ public class IfIdStage {
     if(this.opcode == Instruction.INST_HALT){
       return;
     }
-    this.instPC = simulator.getPCStage().getPC();
-    Instruction inst = simulator.getMemory().getInstAtAddr(this.instPC);
+    
+    // Branching
+    Instruction inst = new Instruction();
+    if (simulator.getExMemStage().branchTaken()) {
+      // Branch YES
+      int branchAddr = simulator.getExMemStage().getAluIntData();
+      simulator.getPCStage().setPC(branchAddr);
+      this.instPC = branchAddr;
+      inst = simulator.getMemory().getInstAtAddr(branchAddr);
+    } else {
+      // Branch NO
+      this.instPC = simulator.getPCStage().getPC();
+      inst = simulator.getMemory().getInstAtAddr(this.instPC);
+    }
     this.opcode = inst.getOpcode();
   }
 }
