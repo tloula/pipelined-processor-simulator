@@ -4,6 +4,7 @@ public class ExMemStage {
 
     PipelineSimulator simulator;
     boolean shouldWriteback = false;
+    boolean squashed = false;
     int instPC = -1;
     int opcode;
     int aluIntData;
@@ -16,6 +17,10 @@ public class ExMemStage {
 
     public boolean getShouldWriteBack() {
         return this.shouldWriteback;
+    }
+
+    public boolean getSquashed() {
+        return this.squashed;
     }
 
     public int getAluIntData(){
@@ -40,7 +45,7 @@ public class ExMemStage {
 
     public void update() {
         // HALT
-        if(this.opcode == Instruction.INST_HALT){
+        if(this.opcode == Instruction.INST_HALT && !this.squashed) {
             return;
         }
 
@@ -77,19 +82,19 @@ public class ExMemStage {
             }
             storeIntData = 0;
         }
+
+        // IType Instructions
         if (inst instanceof ITypeInst) {
             leftOperand = immediate;
             rightOperand = regAData;
-            
+
             // Branch Instructions
             if( opcode == Instruction.INST_BEQ ||
                 opcode == Instruction.INST_BNE || 
                 opcode == Instruction.INST_BGEZ || 
                 opcode == Instruction.INST_BGTZ || 
                 opcode == Instruction.INST_BLEZ || 
-                opcode == Instruction.INST_BLTZ ||
-                opcode == Instruction.INST_JR || 
-                opcode == Instruction.INST_JALR) {
+                opcode == Instruction.INST_BLTZ ) {
                 rightOperand = instPC;
 
                 // decide if branch is taken
@@ -118,10 +123,6 @@ public class ExMemStage {
                         if (regAData < 0) branchTaken = true;
                         else branchTaken = false;
                         break;
-                    case Instruction.INST_JR:
-                    case Instruction.INST_JALR:
-                        branchTaken = true;
-                        break;
                     default:
                         branchTaken = false;
                         System.out.println("How did you get here?" + Instruction.getNameFromOpcode(opcode));
@@ -132,6 +133,16 @@ public class ExMemStage {
                 branchTaken = false;
             }
         }
+
+        // IType JUMP Instructions
+        if ( opcode == Instruction.INST_JR || 
+             opcode == Instruction.INST_JALR){
+
+            leftOperand = 0;
+            rightOperand = regAData;
+            branchTaken = true;
+        }
+        // JType Instructions
         else if (inst instanceof JTypeInst){
             leftOperand = simulator.getIdExStage().getImmediate();
             rightOperand = instPC;
@@ -143,6 +154,7 @@ public class ExMemStage {
                 branchTaken = false;
             }
         }
+        // RType Instructions
         else if (inst instanceof RTypeInst) {
             leftOperand = simulator.getIdExStage().getRegAData();
             rightOperand = simulator.getIdExStage().getRegBData();
@@ -205,9 +217,14 @@ public class ExMemStage {
                 aluIntData = 0;
         }
         shouldWriteback = simulator.getIdExStage().getShouldWriteBack();
-        
+        this.squashed = simulator.getIdExStage().getSquashed();
+
         if(branchTaken){
             System.out.println("Branch Taken");
+            simulator.getPCStage().squash();
+            simulator.getIfIdStage().squash();
+            if (this.opcode == Instruction.INST_JAL || this.opcode == Instruction.INST_JALR)
+                simulator.getIdExStage().setIntRegister(31, this.instPC);
         }
     }
 }

@@ -4,6 +4,7 @@ public class IdExStage {
 
     PipelineSimulator simulator;
     boolean shouldWriteback = false;
+    boolean squashed = false;
     int instPC = -1;
     int opcode;
     int regAData;
@@ -18,6 +19,14 @@ public class IdExStage {
 
     public boolean getShouldWriteBack() {
         return this.shouldWriteback;
+    }
+
+    public boolean getSquashed() {
+        return this.squashed;
+    }
+
+    public void squash() {
+        this.squashed = true;
     }
 
     public int getInstPC(){
@@ -49,7 +58,7 @@ public class IdExStage {
     }
 
     public void update() {
-        if(this.opcode == Instruction.INST_HALT){
+        if(this.opcode == Instruction.INST_HALT && !this.squashed){
             return;
         }
         this.instPC = simulator.getIfIdStage().getInstPC();
@@ -94,24 +103,10 @@ public class IdExStage {
             this.regAData = this.getIntRegister(r.getRS()); 
             this.regBData = this.getIntRegister(r.getRT()); // AAAAAHHHHHHHHHHHHH
         }
-        if (opcode == Instruction.INST_BEQ ||
-            opcode == Instruction.INST_BGEZ ||
-            opcode == Instruction.INST_BGTZ ||
-            opcode == Instruction.INST_BLEZ ||
-            opcode == Instruction.INST_BLTZ ||
-            opcode == Instruction.INST_BNE ||
-            opcode == Instruction.INST_J ||
-            opcode == Instruction.INST_JR ||
-            opcode == Instruction.INST_JAL ||
-            opcode == Instruction.INST_JALR || 
-            opcode == Instruction.INST_HALT ||
-            opcode == Instruction.INST_SW ||
-            opcode == Instruction.INST_NOP
-        ) {
-            shouldWriteback = false;
-        }
-        else {
-            shouldWriteback = true;
-        }
+
+        this.shouldWriteback = simulator.getIfIdStage().getShouldWriteBack();
+        this.squashed = simulator.getIfIdStage().getSquashed();
+
+        if(this.squashed) this.shouldWriteback = false;
     }
 }

@@ -5,6 +5,7 @@ public class MemWbStage {
     PipelineSimulator simulator;
     boolean halted = false;
     boolean shouldWriteback = false;
+    boolean squashed = false;
     int instPC;
     int opcode;
     int aluIntData;
@@ -56,12 +57,13 @@ public class MemWbStage {
         if(this.instPC == -1) return;
         Instruction inst = simulator.getMemory().getInstAtAddr(this.instPC);
         this.opcode = inst.getOpcode();
+        this.squashed = simulator.getExMemStage().getSquashed();
 
         this.aluIntData = simulator.getExMemStage().getAluIntData();
-        if (inst.getOpcode() == Instruction.INST_LW && this.aluIntData % 4 == 0) {
+        if (inst.getOpcode() == Instruction.INST_LW && this.aluIntData % 4 == 0 && !squashed) {
             this.loadIntData = simulator.getMemory().getIntDataAtAddr(aluIntData);
         }
-        else if (inst.getOpcode() == Instruction.INST_SW){
+        else if (inst.getOpcode() == Instruction.INST_SW && !squashed){
             // aluData is the address in memory
             this.simulator.getMemory().setIntDataAtAddr(aluIntData, simulator.getExMemStage().getStoreIntData());
         }
@@ -70,7 +72,7 @@ public class MemWbStage {
         }
 
         shouldWriteback = simulator.getExMemStage().getShouldWriteBack();
-        if(this.opcode == Instruction.INST_HALT){
+        if(this.opcode == Instruction.INST_HALT && !this.squashed){
             halted = true;
         }
     }
