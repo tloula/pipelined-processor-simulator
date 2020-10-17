@@ -1,9 +1,11 @@
 package mips64;
 
 public class IfIdStage {
+
   PipelineSimulator simulator;
   boolean shouldWriteback = false;
   boolean squashed = false;
+  boolean stalled = false;
   int instPC = -1;
   int opcode;
 
@@ -19,6 +21,13 @@ public class IfIdStage {
     return this.squashed;
   }
 
+  public boolean getStalled() {
+    return this.stalled;
+  }
+  public void unstall(){
+    this.stalled = false;
+  }
+
   public void squash() {
     this.squashed = true;
   }
@@ -28,6 +37,13 @@ public class IfIdStage {
   }
 
   public void update() {
+
+    this.stalled = simulator.getIdExStage().getStalled();
+    if (this.stalled) {
+      simulator.getIdExStage().unstall();
+      return;
+  }
+  
     if(this.opcode == Instruction.INST_HALT && !this.squashed){
       return;
     }

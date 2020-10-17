@@ -1,0 +1,6 @@
+0:  LW R1, 4000(R0)
+4:  ADDI R2, R1, 5
+8:  ADDI R3, R1, 5
+12:  ADDI R4, R2, 5
+16:  ADD R5, R2, R3
+20:  HALT

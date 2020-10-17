@@ -17,8 +17,20 @@ public class MemWbStage {
         simulator = sim;
     }
 
+    public boolean getSquashed() {
+        return this.squashed;
+    }
+
     public boolean isHalted() {
         return halted;
+    }
+
+    public int getAluIntData() {
+        return this.aluIntData;
+    }
+    
+    public int getLoadIntData() {
+        return this.loadIntData;
     }
 
     public void update() {

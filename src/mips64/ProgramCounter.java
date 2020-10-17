@@ -4,6 +4,7 @@ public class ProgramCounter {
 
   PipelineSimulator simulator;
   boolean squashed = false;
+  boolean stalled = false;
   int pc;
 
   public ProgramCounter(PipelineSimulator sim) {
@@ -32,6 +33,14 @@ public class ProgramCounter {
   }
 
   public void update() {
+
+    this.stalled = simulator.getIfIdStage().getStalled();
+    if (this.stalled) {
+      simulator.getIfIdStage().unstall();
+      this.stalled = false;
+      return;
+    }
+
     squashed = false;
     // Handle Branches
     if (simulator.getExMemStage().branchTaken()) {

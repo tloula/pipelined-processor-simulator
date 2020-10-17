@@ -5,6 +5,7 @@ public class ExMemStage {
     PipelineSimulator simulator;
     boolean shouldWriteback = false;
     boolean squashed = false;
+    boolean stalled = false;
     int instPC = -1;
     int opcode;
     int aluIntData;
@@ -23,6 +24,17 @@ public class ExMemStage {
         return this.squashed;
     }
 
+    public boolean getStalled() {
+        return this.stalled;
+    }
+
+    public void stall() {
+        this.stalled = true;
+    }
+
+    public void unstall(){
+        this.stalled = false;
+    }
     public int getAluIntData(){
         return this.aluIntData;
     }
@@ -44,6 +56,9 @@ public class ExMemStage {
     }
 
     public void update() {
+
+        if (this.stalled) return;
+
         // HALT
         if(this.opcode == Instruction.INST_HALT && !this.squashed) {
             return;
