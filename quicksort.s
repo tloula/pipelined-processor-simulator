@@ -49,8 +49,8 @@ BLTZ R12, EndOfIf
 --
 ADDI R5, R5, 4
 LW R7, 0(R5)
-SW R7, 0(R6)
 SW R8, 0(R5)
+SW R7, 0(R6)
 LABEL EndOfIf
 ADDI R6, R6, 4
 J StartOfLoop

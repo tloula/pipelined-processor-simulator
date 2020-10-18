@@ -10,6 +10,7 @@ public class ExMemStage {
     int opcode;
     int aluIntData;
     int storeIntData;
+    int willForward; // Specifically from MEM/WB because of a dependency with load word
     Boolean branchTaken = false;
 
     public ExMemStage(PipelineSimulator sim) {
@@ -28,6 +29,26 @@ public class ExMemStage {
         return this.stalled;
     }
 
+    public boolean shouldWriteBack() {
+        return this.shouldWriteback;
+    }
+
+    public boolean branchTaken() {
+        return this.branchTaken;
+    }
+
+    public void setWillForward(int reg) {
+        this.willForward = reg;
+    }
+
+    public int getWhatForward() {
+        return this.willForward;
+    }
+
+    public boolean getWillForward() {
+        return this.willForward == 0 ? false : true;
+    }
+
     public void stall() {
         this.stalled = true;
     }
@@ -43,21 +64,17 @@ public class ExMemStage {
         return this.storeIntData;
     }
 
-    public boolean shouldWriteBack() {
-        return this.shouldWriteback;
-    }
-
-    public boolean branchTaken() {
-        return this.branchTaken;
-    }
-
     public int getInstPC(){
         return this.instPC;
     }
 
     public void update() {
 
-        if (this.stalled) return;
+        if (this.stalled) {
+            this.squashed = true;
+            this.shouldWriteback = false;
+            return;
+        }
 
         // HALT
         if(this.opcode == Instruction.INST_HALT && !this.squashed) {
@@ -85,23 +102,16 @@ public class ExMemStage {
         
         // Set ALU operands
         if(opcode == Instruction.INST_SW){
-            // SW R1, 1000(R2)
-            leftOperand = regAData;
-            rightOperand = immediate;
             storeIntData = regBData;
         }
         else{
-            if(opcode == Instruction.INST_LW){
-                leftOperand = regAData;
-                rightOperand = immediate;
-            }
             storeIntData = 0;
         }
 
         // IType Instructions
         if (inst instanceof ITypeInst) {
-            leftOperand = immediate;
-            rightOperand = regAData;
+            leftOperand = regAData;
+            rightOperand = immediate;
 
             // Branch Instructions
             if( opcode == Instruction.INST_BEQ ||
@@ -110,7 +120,7 @@ public class ExMemStage {
                 opcode == Instruction.INST_BGTZ || 
                 opcode == Instruction.INST_BLEZ || 
                 opcode == Instruction.INST_BLTZ ) {
-                rightOperand = instPC;
+                leftOperand = instPC;
 
                 // decide if branch is taken
                 switch(opcode){
@@ -153,8 +163,8 @@ public class ExMemStage {
         if ( opcode == Instruction.INST_JR || 
              opcode == Instruction.INST_JALR){
 
-            leftOperand = 0;
-            rightOperand = regAData;
+            leftOperand = regAData;
+            rightOperand = 0;
             branchTaken = true;
         }
         // JType Instructions
@@ -175,6 +185,19 @@ public class ExMemStage {
             rightOperand = simulator.getIdExStage().getRegBData();
         }
         
+        // Handle forwarding
+        if(getWillForward() && simulator.getMemWbStage().getForwardedShouldWriteBack()){
+            if(willForward == 1){
+                leftOperand = simulator.getMemWbStage().getForwardedLoadData();
+            }
+            else if (willForward == 2){
+                rightOperand = simulator.getMemWbStage().getForwardedLoadData();
+            }
+            else {
+                leftOperand = rightOperand = simulator.getMemWbStage().getForwardedLoadData();                
+            }
+            willForward = 0;
+        }
         // Do ALU operation
         switch(this.opcode) {
             case Instruction.INST_ADD:
@@ -234,8 +257,7 @@ public class ExMemStage {
         shouldWriteback = simulator.getIdExStage().getShouldWriteBack();
         this.squashed = simulator.getIdExStage().getSquashed();
 
-        if(branchTaken){
-            System.out.println("Branch Taken");
+        if(branchTaken && !this.squashed){
             simulator.getPCStage().squash();
             simulator.getIfIdStage().squash();
             if (this.opcode == Instruction.INST_JAL || this.opcode == Instruction.INST_JALR)

@@ -48,8 +48,8 @@ LABEL StartOfLoop
       --
 84:  ADDI R5, R5, 4
 88:  LW R7, 0(R5)
-92:  SW R7, 0(R6)
-96:  SW R8, 0(R5)
+92:  SW R8, 0(R5)
+96:  SW R7, 0(R6)
 LABEL EndOfIf
 100:  ADDI R6, R6, 4
 104:  J StartOfLoop

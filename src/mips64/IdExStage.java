@@ -77,6 +77,7 @@ public class IdExStage {
 
         this.stalled = simulator.getExMemStage().getStalled();
         if (this.stalled) {
+            inst2 = inst1;
             simulator.getExMemStage().unstall();
             return;
         }
@@ -101,7 +102,8 @@ public class IdExStage {
         if (inst0 instanceof ITypeInst) {
             ITypeInst i = (ITypeInst)inst0;
             this.immediate = i.getImmed();
-            this.regAData = this.getIntRegister(i.getRS()); // rs is not the destination like it should be, rt is
+            this.regAData = this.getIntRegister(i.getRS());
+            this.regBData = 0;
 
             // Handle branches
             if ( opcode == Instruction.INST_BEQ ||
@@ -128,6 +130,13 @@ public class IdExStage {
             this.immediate = 0;
             this.regAData = this.getIntRegister(r.getRS()); 
             this.regBData = this.getIntRegister(r.getRT()); // AAAAAHHHHHHHHHHHHH
+        
+            if( opcode == Instruction.INST_SLL ||
+                opcode == Instruction.INST_SRA ||
+                opcode == Instruction.INST_SRL ){
+        
+                regBData = ((RTypeInst)inst0).getShamt();
+            }
         }
 
         this.shouldWriteback = simulator.getIfIdStage().getShouldWriteBack();
@@ -170,23 +179,55 @@ public class IdExStage {
         Boolean exMemSquashed = simulator.getExMemStage().getSquashed();
         Boolean memWbSquashed = simulator.getMemWbStage().getSquashed();
 
-        if (inst1Dest == inst0Ops1 && !exMemSquashed) {
+        Boolean inst1IsBranch = false;
+        if (inst1.getOpcode() == Instruction.INST_BEQ ||
+        inst1.getOpcode() == Instruction.INST_BNE ||
+        inst1.getOpcode() == Instruction.INST_BGEZ ||
+        inst1.getOpcode() == Instruction.INST_BGTZ ||
+        inst1.getOpcode() == Instruction.INST_BLEZ ||
+        inst1.getOpcode() == Instruction.INST_BLTZ ) {
+            inst1IsBranch = true;
+        }
+        Boolean inst2IsBranch = false;
+        if (inst2.getOpcode() == Instruction.INST_BEQ ||
+            inst2.getOpcode() == Instruction.INST_BNE ||
+            inst2.getOpcode() == Instruction.INST_BGEZ ||
+            inst2.getOpcode() == Instruction.INST_BGTZ ||
+            inst2.getOpcode() == Instruction.INST_BLEZ ||
+            inst2.getOpcode() == Instruction.INST_BLTZ ) {
+                inst2IsBranch = true;
+        }
+        
+        if(inst0.getOpcode() == Instruction.INST_SW){
+            System.out.println("Yoink");
+        }
+
+        if (inst1Dest == inst0Ops1 && !exMemSquashed && !inst1IsBranch) {
             if (inst1.getOpcode() == Instruction.INST_LW){
+                // Stall and tell Ex/Mem to forward
                 simulator.getExMemStage().stall();
+                simulator.getExMemStage().setWillForward(1);
             }
             else {
                 this.regAData = simulator.getExMemStage().getAluIntData();
             }
         }
-        if (inst1Dest == inst0Ops2 && !exMemSquashed) {
+        if (inst1Dest == inst0Ops2 && !exMemSquashed && !inst1IsBranch) {
             if (inst1.getOpcode() == Instruction.INST_LW){
+                // Stall and tell Ex/Mem to forward
                 simulator.getExMemStage().stall();
+                if(simulator.getExMemStage().getWillForward()){
+                    simulator.getExMemStage().setWillForward(3);
+                }
+                else{
+                    simulator.getExMemStage().setWillForward(2);
+                }
             }
             else {
                 this.regBData = simulator.getExMemStage().getAluIntData();
             }
         }
-        if (inst2Dest == inst0Ops1 && !memWbSquashed) {
+        if (inst2Dest == inst0Ops1 && !memWbSquashed && !inst2IsBranch && inst2Dest != inst1Dest) {
             if (inst2.getOpcode() == Instruction.INST_LW) {
                 this.regAData = simulator.getMemWbStage().getLoadIntData();
             }
@@ -194,7 +235,7 @@ public class IdExStage {
                 this.regAData = simulator.getMemWbStage().getAluIntData();
             }
         }
-        if (inst2Dest == inst0Ops2 && !memWbSquashed) {
+        if (inst2Dest == inst0Ops2 && !memWbSquashed && !inst2IsBranch && inst2Dest != inst1Dest) {
             if (inst2.getOpcode() == Instruction.INST_LW){
                 this.regBData = simulator.getMemWbStage().getLoadIntData();
             }
@@ -202,5 +243,14 @@ public class IdExStage {
                 this.regBData = simulator.getMemWbStage().getAluIntData();
             }
         }
+
+        if(inst0.getOpcode() == Instruction.INST_SW && inst1.getOpcode() == Instruction.INST_LW){
+            // Stall...frick, 
+            // TODO: Fix or delete
+        }
+        if(inst0.getOpcode() == Instruction.INST_SW && inst2.getOpcode() == Instruction.INST_LW){
+            this.regBData = simulator.getMemWbStage().getLoadIntData();
+        }
+
     }
 }

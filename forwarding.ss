@@ -1,6 +1,14 @@
-0:  LW R1, 4000(R0)
-4:  ADDI R2, R1, 5
-8:  ADDI R3, R1, 5
-12:  ADDI R4, R2, 5
-16:  ADD R5, R2, R3
-20:  HALT
+0:  ADDI R1, R1, 1
+4:  ADDI R2, R2, 2
+8:  JAL Spot 
+12:  ADDI R3, R3, 3
+16:  ADDI R4, R4, 4
+20:  J aftJR
+Label Spot
+24:  ADDI R5, R5, 5
+28:  ADDI R6, R6, 6
+32:  JR R31
+LABEL aftJR
+36:  ADDI R7, R7, 7
+40:  ADDI R8, R8, 8
+44:  HALT

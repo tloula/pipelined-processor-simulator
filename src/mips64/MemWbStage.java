@@ -6,13 +6,14 @@ public class MemWbStage {
     boolean halted = false;
     boolean shouldWriteback = false;
     boolean squashed = false;
+    boolean forwardedShouldWriteBack;
     int instPC;
     int opcode;
     int aluIntData;
     int loadIntData;
+    int forwardedLoadData;
 
     // Need to add forwarding variables??
-
     public MemWbStage(PipelineSimulator sim) {
         simulator = sim;
     }
@@ -25,6 +26,10 @@ public class MemWbStage {
         return halted;
     }
 
+    public boolean getForwardedShouldWriteBack() {
+        return this.forwardedShouldWriteBack;
+    }
+
     public int getAluIntData() {
         return this.aluIntData;
     }
@@ -32,7 +37,11 @@ public class MemWbStage {
     public int getLoadIntData() {
         return this.loadIntData;
     }
-
+    
+    public int getForwardedLoadData() {
+        return this.forwardedLoadData;
+    }
+    
     public void update() {
         // Save results ----Need to save values to forwarding data variables????
         if (this.shouldWriteback) {
@@ -41,12 +50,13 @@ public class MemWbStage {
             if (inst instanceof ITypeInst) {
                 ITypeInst i = (ITypeInst)inst;
                 if (i.getRT() == 0){
-                    System.out.println("Can't sent R0");
+                    System.out.println("Can't set R0");
                     // Throw exception
                     return;
                 }
                 if (inst.getOpcode() == Instruction.INST_LW) {
                     this.simulator.getIdExStage().setIntRegister(i.getRT(), loadIntData); // Change back to getRS()!!!
+                    this.forwardedLoadData = this.loadIntData;
                 }
                 else {
                     this.simulator.getIdExStage().setIntRegister(i.getRT(), aluIntData); // Change back to getRS()!!!
@@ -64,6 +74,7 @@ public class MemWbStage {
                 }
             }
         }
+        this.forwardedShouldWriteBack = this.shouldWriteback;
 
         this.instPC = simulator.getExMemStage().getInstPC();
         if(this.instPC == -1) return;

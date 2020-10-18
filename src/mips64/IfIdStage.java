@@ -52,6 +52,12 @@ public class IfIdStage {
     Instruction inst = simulator.getMemory().getInstAtAddr(this.instPC);
     this.opcode = inst.getOpcode();
 
+    if(opcode == Instruction.INST_ADDI){
+      System.out.println("Tab");
+    }
+
+    this.squashed = simulator.getPCStage().getSquashed();
+
     if (opcode == Instruction.INST_BEQ ||
       opcode == Instruction.INST_BGEZ ||
       opcode == Instruction.INST_BGTZ ||
@@ -72,6 +78,5 @@ public class IfIdStage {
     else {
       this.shouldWriteback = true;
     }
-    this.squashed = simulator.getPCStage().getSquashed();
   }
 }
