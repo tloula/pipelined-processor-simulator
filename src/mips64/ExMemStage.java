@@ -12,6 +12,8 @@ public class ExMemStage {
     int storeIntData;
     int willForward; // Specifically from MEM/WB because of a dependency with load word
     Boolean branchTaken = false;
+    int branchCount = 0;
+    int stallCount = 0;
 
     public ExMemStage(PipelineSimulator sim) {
         simulator = sim;
@@ -50,12 +52,15 @@ public class ExMemStage {
     }
 
     public void stall() {
+        stallCount++;
+        System.out.println("Stalled: " + stallCount);
         this.stalled = true;
     }
 
     public void unstall(){
         this.stalled = false;
     }
+
     public int getAluIntData(){
         return this.aluIntData;
     }
@@ -99,7 +104,7 @@ public class ExMemStage {
         int regAData = simulator.getIdExStage().getRegAData();
         int regBData = simulator.getIdExStage().getRegBData();
         int immediate = simulator.getIdExStage().getImmediate();
-        
+
         // Set ALU operands
         if(opcode == Instruction.INST_SW){
             storeIntData = regBData;
@@ -184,7 +189,7 @@ public class ExMemStage {
             leftOperand = simulator.getIdExStage().getRegAData();
             rightOperand = simulator.getIdExStage().getRegBData();
         }
-        
+
         // Handle forwarding
         if(getWillForward() && simulator.getMemWbStage().getForwardedShouldWriteBack()){
             if(willForward == 1){
@@ -198,6 +203,7 @@ public class ExMemStage {
             }
             willForward = 0;
         }
+
         // Do ALU operation
         switch(this.opcode) {
             case Instruction.INST_ADD:
@@ -258,6 +264,8 @@ public class ExMemStage {
         this.squashed = simulator.getIdExStage().getSquashed();
 
         if(branchTaken && !this.squashed){
+            branchCount++;
+            System.out.println("Branches taken: " + branchCount);
             simulator.getPCStage().squash();
             simulator.getIfIdStage().squash();
             if (this.opcode == Instruction.INST_JAL || this.opcode == Instruction.INST_JALR)

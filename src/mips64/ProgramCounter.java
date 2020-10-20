@@ -41,8 +41,8 @@ public class ProgramCounter {
       return;
     }
 
-    squashed = false;
     // Handle Branches
+    squashed = false;
     if (simulator.getExMemStage().branchTaken() && !simulator.getExMemStage().getSquashed()) {
         int branchAddr = simulator.getExMemStage().getAluIntData();
         this.pc = branchAddr;
