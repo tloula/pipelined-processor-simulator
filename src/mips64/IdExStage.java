@@ -174,6 +174,10 @@ public class IdExStage {
         }
         else return;
 
+        if(opcode == Instruction.INST_LW){
+            System.out.println("Kowabunga");
+        }
+
         // Compare ops and dest
         // if match and not squashed, forward
         Boolean exMemSquashed = simulator.getExMemStage().getSquashed();
@@ -197,11 +201,7 @@ public class IdExStage {
             inst2.getOpcode() == Instruction.INST_BLTZ ) {
                 inst2IsBranch = true;
         }
-        
-        if(inst0.getOpcode() == Instruction.INST_SW){
-            System.out.println("Yoink");
-        }
-
+        System.out.println("Inst1 is Branch = " + inst1IsBranch);
         if (inst1Dest == inst0Ops1 && !exMemSquashed && !inst1IsBranch) {
             if (inst1.getOpcode() == Instruction.INST_LW){
                 // Stall and tell Ex/Mem to forward
@@ -227,7 +227,7 @@ public class IdExStage {
                 this.regBData = simulator.getExMemStage().getAluIntData();
             }
         }
-        if (inst2Dest == inst0Ops1 && !memWbSquashed && !inst2IsBranch && inst2Dest != inst1Dest) {
+        if (inst2Dest == inst0Ops1 && !memWbSquashed && !inst2IsBranch && (inst2Dest != inst1Dest || (inst2Dest == inst1Dest && inst1IsBranch))) {
             if (inst2.getOpcode() == Instruction.INST_LW) {
                 this.regAData = simulator.getMemWbStage().getLoadIntData();
             }
@@ -235,7 +235,7 @@ public class IdExStage {
                 this.regAData = simulator.getMemWbStage().getAluIntData();
             }
         }
-        if (inst2Dest == inst0Ops2 && !memWbSquashed && !inst2IsBranch && inst2Dest != inst1Dest) {
+        if (inst2Dest == inst0Ops2 && !memWbSquashed && !inst2IsBranch && (inst2Dest != inst1Dest || (inst2Dest == inst1Dest && inst1IsBranch))) {
             if (inst2.getOpcode() == Instruction.INST_LW){
                 this.regBData = simulator.getMemWbStage().getLoadIntData();
             }
