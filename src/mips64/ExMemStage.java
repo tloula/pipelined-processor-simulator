@@ -75,18 +75,17 @@ public class ExMemStage {
 
     public void update() {
 
+        // Handle Stall and Halt
         if (this.stalled) {
             this.squashed = true;
             this.shouldWriteback = false;
             return;
         }
-
-        // HALT
         if(this.opcode == Instruction.INST_HALT && !this.squashed) {
             return;
         }
 
-        // Setting PC and Instruction
+        // Set data
         this.instPC = simulator.getIdExStage().getInstPC();
         Instruction inst = new Instruction();
         if(this.instPC == -1){
@@ -96,11 +95,12 @@ public class ExMemStage {
             inst = simulator.getMemory().getInstAtAddr(this.instPC);
         }
         this.opcode = inst.getOpcode();
-
+        this.shouldWriteback = simulator.getIdExStage().getShouldWriteBack();
+        this.squashed = simulator.getIdExStage().getSquashed();
         int leftOperand = -1;
         int rightOperand = -1;
 
-        // Save Registers to local variables
+        // Save Register data to local variables
         int regAData = simulator.getIdExStage().getRegAData();
         int regBData = simulator.getIdExStage().getRegBData();
         int immediate = simulator.getIdExStage().getImmediate();
@@ -190,7 +190,7 @@ public class ExMemStage {
             rightOperand = simulator.getIdExStage().getRegBData();
         }
 
-        // Handle forwarding
+        // Handle forwarding for when stalls happen
         if(getWillForward() && simulator.getMemWbStage().getForwardedShouldWriteBack()){
             if(willForward == 1){
                 leftOperand = simulator.getMemWbStage().getForwardedLoadData();
@@ -260,9 +260,9 @@ public class ExMemStage {
                 System.out.println("Invalid ARU inst: " + Instruction.getNameFromOpcode(opcode));
                 aluIntData = 0;
         }
-        shouldWriteback = simulator.getIdExStage().getShouldWriteBack();
-        this.squashed = simulator.getIdExStage().getSquashed();
 
+        // Tell the other stages that the branch was taken
+        // Squash previous 2 instructions since they are from the fallthrough path
         if(branchTaken && !this.squashed){
             branchCount++;
             System.out.println("Branches taken: " + branchCount);

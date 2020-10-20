@@ -38,35 +38,38 @@ public class IfIdStage {
 
   public void update() {
 
+    // Handle stall
     this.stalled = simulator.getIdExStage().getStalled();
     if (this.stalled) {
       simulator.getIdExStage().unstall();
       return;
     }
   
+    // Handle Halt (Copies G's Simulator, ish)
     if(this.opcode == Instruction.INST_HALT && !this.squashed){
       return;
     }
 
+    // Set data
     this.instPC = simulator.getPCStage().getPC();
-    Instruction inst = simulator.getMemory().getInstAtAddr(this.instPC);
-    this.opcode = inst.getOpcode();
+    this.opcode = simulator.getMemory().getInstAtAddr(this.instPC).getOpcode();;
     this.squashed = simulator.getPCStage().getSquashed();
 
-    if (opcode == Instruction.INST_BEQ ||
-      opcode == Instruction.INST_BGEZ ||
-      opcode == Instruction.INST_BGTZ ||
-      opcode == Instruction.INST_BLEZ ||
-      opcode == Instruction.INST_BLTZ ||
-      opcode == Instruction.INST_BNE ||
-      opcode == Instruction.INST_J ||
-      opcode == Instruction.INST_JR ||
-      opcode == Instruction.INST_JAL ||
-      opcode == Instruction.INST_JALR || 
-      opcode == Instruction.INST_SW ||
-      opcode == Instruction.INST_HALT ||
-      opcode == Instruction.INST_NOP ||
-      this.squashed
+    // Decide if this instruction should write back (things like branches shouldn't)
+    if (this.opcode == Instruction.INST_BEQ ||
+        this.opcode == Instruction.INST_BGEZ ||
+        this.opcode == Instruction.INST_BGTZ ||
+        this.opcode == Instruction.INST_BLEZ ||
+        this.opcode == Instruction.INST_BLTZ ||
+        this.opcode == Instruction.INST_BNE ||
+        this.opcode == Instruction.INST_J ||
+        this.opcode == Instruction.INST_JR ||
+        this.opcode == Instruction.INST_JAL ||
+        this.opcode == Instruction.INST_JALR || 
+        this.opcode == Instruction.INST_SW ||
+        this.opcode == Instruction.INST_HALT ||
+        this.opcode == Instruction.INST_NOP ||
+        this.squashed
     ) {
       this.shouldWriteback = false;
     }

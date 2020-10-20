@@ -1,5 +1,4 @@
 package mips64;
-
 public class MemWbStage {
 
     PipelineSimulator simulator;
@@ -17,33 +16,27 @@ public class MemWbStage {
     public MemWbStage(PipelineSimulator sim) {
         simulator = sim;
     }
-
     public boolean getSquashed() {
         return this.squashed;
     }
-
     public boolean isHalted() {
         return halted;
     }
-
     public boolean getForwardedShouldWriteBack() {
         return this.forwardedShouldWriteBack;
     }
-
     public int getAluIntData() {
         return this.aluIntData;
     }
-    
     public int getLoadIntData() {
         return this.loadIntData;
     }
-    
     public int getForwardedLoadData() {
         return this.forwardedLoadData;
     }
     
     public void update() {
-        // Save results ----Need to save values to forwarding data variables????
+        // Do Write Back
         if (this.shouldWriteback) {
             Instruction inst = simulator.getMemory().getInstAtAddr(this.instPC);
 
@@ -55,34 +48,31 @@ public class MemWbStage {
                     return;
                 }
                 if (inst.getOpcode() == Instruction.INST_LW) {
-                    this.simulator.getIdExStage().setIntRegister(i.getRT(), loadIntData); // Change back to getRS()!!!
+                    this.simulator.getIdExStage().setIntRegister(i.getRT(), loadIntData);
                     this.forwardedLoadData = this.loadIntData;
                 }
                 else {
-                    this.simulator.getIdExStage().setIntRegister(i.getRT(), aluIntData); // Change back to getRS()!!!
+                    this.simulator.getIdExStage().setIntRegister(i.getRT(), aluIntData);
                 }
             }
 
             else if (inst instanceof RTypeInst) {
-                // Isn't LW an I type instruction? Do we need to do this check??? I think we can just run this.simulator.get....
                 RTypeInst r = (RTypeInst)inst;
-                if (inst.getOpcode() == Instruction.INST_LW) {          // Kill me
-                    this.simulator.getIdExStage().setIntRegister(r.getRD(), loadIntData); // Change back to getRS()!!!
-                }
-                else {
-                    this.simulator.getIdExStage().setIntRegister(r.getRD(), aluIntData); // Change back to getRS()!!!
-                }
+                this.simulator.getIdExStage().setIntRegister(r.getRD(), aluIntData);
             }
         }
-        this.forwardedShouldWriteBack = this.shouldWriteback;
 
+        // Set Data
+        this.forwardedShouldWriteBack = this.shouldWriteback;
         this.instPC = simulator.getExMemStage().getInstPC();
         if(this.instPC == -1) return;
         Instruction inst = simulator.getMemory().getInstAtAddr(this.instPC);
         this.opcode = inst.getOpcode();
         this.squashed = simulator.getExMemStage().getSquashed();
-
         this.aluIntData = simulator.getExMemStage().getAluIntData();
+        this.shouldWriteback = simulator.getExMemStage().getShouldWriteBack();
+
+        // Get or Set data in memory
         if (inst.getOpcode() == Instruction.INST_LW && this.aluIntData % 4 == 0 && !squashed) {
             this.loadIntData = simulator.getMemory().getIntDataAtAddr(aluIntData);
         }
@@ -94,7 +84,7 @@ public class MemWbStage {
             this.loadIntData = 0;
         }
 
-        shouldWriteback = simulator.getExMemStage().getShouldWriteBack();
+        // Handle Halt
         if(this.opcode == Instruction.INST_HALT && !this.squashed){
             halted = true;
         }

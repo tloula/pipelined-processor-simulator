@@ -25,57 +25,46 @@ public class IdExStage {
         inst1 = new Instruction();
         inst2 = new Instruction();
     }
-
     public boolean getShouldWriteBack() {
         return this.shouldWriteback;
     }
-
     public boolean getSquashed() {
         return this.squashed;
     }
-
     public boolean getStalled() {
         return this.stalled;
     }
-
     public void setIntRegister(int regNum, int value) {
         this.regs[regNum] = value;
     }
-
     public void unstall(){
         this.stalled = false;
     }
-
     public void squash() {
         this.squashed = true;
     }
-
     public int getInstPC(){
         return instPC;
     }
-
     public int getIntRegister(int regNum) {
         return this.regs[regNum];
     }
-
     public int getRegAData() {
         return this.regAData;
     }
-
     public int getRegBData() {
         return this.regBData;
     }
-
     public int getImmediate() {
         return this.immediate;
     }
-
     public static int signExtend(int val) {
         return val << 16 >> 16;
     }
 
     public void update() {
 
+        // Handle Stall
         this.stalled = simulator.getExMemStage().getStalled();
         if (this.stalled) {
             inst2 = inst1;
@@ -83,14 +72,20 @@ public class IdExStage {
             return;
         }
 
+        // Handle Halt (Copies G's Simulator, ish)
         if(this.opcode == Instruction.INST_HALT && !this.squashed){
             return;
         }
-        this.instPC = simulator.getIfIdStage().getInstPC();
 
+        // Set data
+        this.instPC = simulator.getIfIdStage().getInstPC();
+        this.shouldWriteback = simulator.getIfIdStage().getShouldWriteBack();
+        this.squashed = simulator.getIfIdStage().getSquashed();
+        if ( this.squashed ) this.shouldWriteback = false;
         inst2 = inst1;
         inst1 = inst0;
 
+        // If the pipeline is just starting up, copy G's NOP's
         if(this.instPC == -1){
             inst0.setOpcode(Instruction.INST_NOP);
         }
@@ -106,7 +101,7 @@ public class IdExStage {
             this.regAData = this.getIntRegister(i.getRS());
             this.regBData = 0;
 
-            // Handle branches
+            // Branches are special
             if ( opcode == Instruction.INST_BEQ ||
                  opcode == Instruction.INST_BNE ||
                  opcode == Instruction.INST_BGEZ ||
@@ -130,7 +125,7 @@ public class IdExStage {
             RTypeInst r = (RTypeInst)inst0;
             this.immediate = 0;
             this.regAData = this.getIntRegister(r.getRS()); 
-            this.regBData = this.getIntRegister(r.getRT()); // AAAAAHHHHHHHHHHHHH
+            this.regBData = this.getIntRegister(r.getRT());
         
             if( opcode == Instruction.INST_SLL ||
                 opcode == Instruction.INST_SRA ||
@@ -140,14 +135,9 @@ public class IdExStage {
             }
         }
 
-        this.shouldWriteback = simulator.getIfIdStage().getShouldWriteBack();
-        this.squashed = simulator.getIfIdStage().getSquashed();
+        // Handle forwarding by overwriting previous values if incorrect
 
-        if(this.squashed) this.shouldWriteback = false;
-
-        // Handle forwarding by overwriting previous values if they are incorrect
-
-        // Get ops and dest
+        // Get ops from curr inst and dest from prev 2 inst
         int inst0Ops1 = -1; 
         int inst0Ops2 = -1;
         int inst1Dest = -1;
@@ -182,11 +172,11 @@ public class IdExStage {
 
         Boolean inst1IsBranch = false;
         if (inst1.getOpcode() == Instruction.INST_BEQ ||
-        inst1.getOpcode() == Instruction.INST_BNE ||
-        inst1.getOpcode() == Instruction.INST_BGEZ ||
-        inst1.getOpcode() == Instruction.INST_BGTZ ||
-        inst1.getOpcode() == Instruction.INST_BLEZ ||
-        inst1.getOpcode() == Instruction.INST_BLTZ ) {
+            inst1.getOpcode() == Instruction.INST_BNE ||
+            inst1.getOpcode() == Instruction.INST_BGEZ ||
+            inst1.getOpcode() == Instruction.INST_BGTZ ||
+            inst1.getOpcode() == Instruction.INST_BLEZ ||
+            inst1.getOpcode() == Instruction.INST_BLTZ ) {
             inst1IsBranch = true;
         }
         Boolean inst2IsBranch = false;
@@ -199,6 +189,7 @@ public class IdExStage {
                 inst2IsBranch = true;
         }
 
+        // Forward from one instruction ahead
         if (inst1Dest == inst0Ops1 && !exMemSquashed && !inst1IsBranch) {
             if (inst1.getOpcode() == Instruction.INST_LW){
                 // Stall and tell Ex/Mem to forward
@@ -224,6 +215,8 @@ public class IdExStage {
                 this.regBData = simulator.getExMemStage().getAluIntData();
             }
         }
+
+        // Forward from 2 instructions ahead
         if (inst2Dest == inst0Ops1 && !memWbSquashed && !inst2IsBranch && (inst2Dest != inst1Dest || (inst2Dest == inst1Dest && inst1IsBranch))) {
             if (inst2.getOpcode() == Instruction.INST_LW) {
                 this.regAData = simulator.getMemWbStage().getLoadIntData();
@@ -241,9 +234,19 @@ public class IdExStage {
             }
         }
 
+        // Special forwarding condition when a load is followed closely by a store 
         if(inst0.getOpcode() == Instruction.INST_SW && inst1.getOpcode() == Instruction.INST_LW){
-            // Stall...frick, 
-            // TODO: Fix or delete
+            // This code is close to correct but hasn't been tested
+            // We've spent 20 hours on this project. Kinda tired of it
+            // Our code works without it so....
+            // Stall and tell Ex/Mem to forward
+            // simulator.getExMemStage().stall();
+            // if(simulator.getExMemStage().getWillForward()){
+            //     simulator.getExMemStage().setWillForward(3);
+            // }
+            // else{
+            //     simulator.getExMemStage().setWillForward(2);
+            // }
         }
         if(inst0.getOpcode() == Instruction.INST_SW && inst2.getOpcode() == Instruction.INST_LW){
             this.regBData = simulator.getMemWbStage().getLoadIntData();

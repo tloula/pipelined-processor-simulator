@@ -34,6 +34,7 @@ public class ProgramCounter {
 
   public void update() {
 
+    // Handle stalls
     this.stalled = simulator.getIfIdStage().getStalled();
     if (this.stalled) {
       simulator.getIfIdStage().unstall();
@@ -42,10 +43,9 @@ public class ProgramCounter {
     }
 
     // Handle Branches
-    squashed = false;
+    this.squashed = false;
     if (simulator.getExMemStage().branchTaken() && !simulator.getExMemStage().getSquashed()) {
-        int branchAddr = simulator.getExMemStage().getAluIntData();
-        this.pc = branchAddr;
+        this.pc = simulator.getExMemStage().getAluIntData();
     }
 
     incrPC();
